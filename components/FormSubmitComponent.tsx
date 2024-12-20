@@ -48,7 +48,7 @@ const FormSubmitComponent = ({
       setRenderKey(new Date().getTime());
       toast({
         title: "Error",
-        description: "please check the form for errors",
+        description: "Please check the form for errors.",
         variant: "destructive",
       });
 
@@ -62,7 +62,7 @@ const FormSubmitComponent = ({
     } catch (error) {
       toast({
         title: "Error",
-        description: "somethin went wrong!",
+        description: "Something went wrong!",
         variant: "destructive",
       });
     }
@@ -71,10 +71,11 @@ const FormSubmitComponent = ({
   if (submitted) {
     return (
       <div className="flex justify-center w-full h-full items-center p-8">
-        <div className="max-w-[620px] flex flex-col gap-4 flex-grow bg-background w-full p-8 overflow-y-auto border shadow-xl shadow-blue-700 rounded">
-          <h1 className="text-2xl font-bold">Form submitted</h1>
+        <div className="max-w-[620px] flex flex-col gap-4 flex-grow bg-dark-900 text-white w-full p-8 overflow-y-auto border border-dark-700 shadow-lg rounded-lg">
+          <h1 className="text-2xl font-bold text-green-500">Form Submitted to us</h1>
+          
           <p className="text-muted-foreground">
-            Thank u for submitting the form, you can close this page now
+            Thank you for submitting the form. You can close this page now.
           </p>
         </div>
       </div>
@@ -82,8 +83,8 @@ const FormSubmitComponent = ({
   }
 
   return (
-    <div className="flex justify-center w-full h-full items-center p-8">
-      <div key={renderKey} className="max-w-[620px] flex flex-col gap-4 flex-grow bg-background w-full p-8 overflow-y-auto border shadow-xl shadow-blue-700 rounded">
+    <div className="flex justify-center w-full h-full items-center p-8 bg-dark-800">
+      <div key={renderKey} className="max-w-[620px] flex flex-col gap-6 flex-grow bg-dark-900 text-white w-full p-8 overflow-y-auto border border-dark-700 shadow-lg rounded-lg">
         {content.map((element) => {
           const FormElement = FormElements[element.type].formComponent;
           return (
@@ -98,19 +99,20 @@ const FormSubmitComponent = ({
         })}
 
         <Button
-          className="mt-8"
+          className="mt-6 px-6 py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition-all ease-in-out duration-200"
           onClick={() => {
             startTransition(submitForm);
           }}
           disabled={pending}
         >
-          {!pending && (
+          {!pending ? (
             <>
               <HiCursorClick className="mr-2" />
               Submit
             </>
+          ) : (
+            <ImSpinner2 className="animate-spin" />
           )}
-          {pending && <ImSpinner2 className="animate-spin" />}
         </Button>
       </div>
     </div>
