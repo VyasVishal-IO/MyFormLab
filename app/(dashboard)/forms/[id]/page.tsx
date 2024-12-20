@@ -1,212 +1,197 @@
-import { GetFormById, GetFormWithSubmissions } from "@/actions/form";
-import VisitBtn from "@/components/VisitBtn";
-import FormLinkShare from "@/components/FormLinkShare";
-import { StatsCard } from "../../page";
+import { GetFormStats, GetForms } from "@/actions/form";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import React, { ReactNode, Suspense } from "react";
 import { LuView } from "react-icons/lu";
-import { FaWpforms } from "react-icons/fa";
+import { FaEdit, FaWpforms } from "react-icons/fa";
+import { BiRightArrowAlt } from "react-icons/bi";
 import { HiCursorClick } from "react-icons/hi";
 import { TbArrowBounce } from "react-icons/tb";
-import { ElementsType, FormElementInstance } from "@/components/FormElements";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import { format, formatDistance } from "date-fns";
+import CreateFormBtn from "@/components/CreateFormBtn";
+import { Form } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ReactNode } from "react";
+import { formatDistance } from "date-fns";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-async function FormDetailPage({
-  params,
-}: {
-  params: {
-    id: string;
-  };
-}) {
-  const { id } = params;
-  const form = await GetFormById(Number(id));
+export default function Home() {
+  return (
+    <div className="container pt-4">
+      <Suspense fallback={<StatsCards loading={true} />}>
+        <CardStatsWrapper />
+      </Suspense>
+      <Separator className="my-6" />
+      <h2 className="text-4xl font-bold col-span-2">Your forms</h2>
+      <Separator className="my-6" />
+      <div className="grid gric-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CreateFormBtn />
+        <Suspense
+          fallback={[1, 2, 3, 4].map((el) => (
+            <FormCardSkeleton key={el} />
+          ))}
+        >
+          <FormCards />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
 
-  if (!form) {
-    throw new Error("form not found");
-  }
+async function CardStatsWrapper() {
+  const stats = await GetFormStats();
+  return <StatsCards loading={false} data={stats} />;
+}
 
-  const { visits, submissions } = form;
-  let submissionRate = 0;
+interface StatsCardProps {
+  data?: Awaited<ReturnType<typeof GetFormStats>>;
+  loading: boolean;
+}
 
-  if (visits > 0) {
-    submissionRate = (submissions / visits) * 100;
-  }
-
-  const bounceRate = 100 - submissionRate;
+function StatsCards(props: StatsCardProps) {
+  const { data, loading } = props;
 
   return (
+    <div className="w-full pt-8 gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <StatsCard
+        title="Total visits"
+        icon={<LuView className="text-white-600" />}
+        helperText="All time form visits"
+        value={data?.visits.toLocaleString() || ""}
+        loading={loading}
+        className=""
+      />
+
+      <StatsCard
+        title="Total submissions"
+        icon={<FaWpforms className="text-white-600" />}
+        helperText="All time form submissions"
+        value={data?.submissions.toLocaleString() || ""}
+        loading={loading}
+        className=""
+      />
+
+      <StatsCard
+        title="Submission rate"
+        icon={<HiCursorClick className="text-white-600" />}
+        helperText="Visits that result in form submission"
+        value={data?.submissionRate.toLocaleString() + "%" || ""}
+        loading={loading}
+        className=""
+      />
+
+      <StatsCard
+        title="Bounce rate"
+        icon={<TbArrowBounce className="text-white-600" />}
+        helperText="Visits that leaves without interacting"
+        value={data?.submissionRate.toLocaleString() + "%" || ""}
+        loading={loading}
+        className=""
+      />
+    </div>
+  );
+}
+
+export function StatsCard({
+  title,
+  value,
+  icon,
+  helperText,
+  loading,
+  className,
+}: {
+  title: string;
+  value: string;
+  helperText: string;
+  className: string;
+  loading: boolean;
+  icon: ReactNode;
+}) {
+  return (
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">
+          {loading && (
+            <Skeleton>
+              <span className="opacity-0">0</span>
+            </Skeleton>
+          )}
+          {!loading && value}
+        </div>
+        <p className="text-xs text-muted-foreground pt-1">{helperText}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FormCardSkeleton() {
+  return <Skeleton className="border-2 border-primary-/20 h-[190px] w-full" />;
+}
+
+async function FormCards() {
+  const forms = await GetForms();
+  return (
     <>
-      <div className="py-10 border-b border-muted">
-        <div className="flex justify-between container">
-          <h1 className="text-4xl font-bold truncate">{form.name}</h1>
-          <VisitBtn shareUrl={form.shareURL} />
-        </div>
-      </div>
-
-      <div className="py-4 border-b border-muted">
-        <div className="container flex gap-2 items-center justify-between">
-          <FormLinkShare shareUrl={form.shareURL} />
-        </div>
-      </div>
-
-      <div className="w-full pt-8 gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 container">
-        <StatsCard
-          title="Total submissions"
-          icon={<FaWpforms className="text-yellow-600" />}
-          helperText="All time form submissions"
-          value={submissions.toLocaleString() || ""}
-          loading={false}
-          className="shadow-md shadow-yellow-600"
-        />
-
-        <StatsCard
-          title="Total visits"
-          icon={<LuView className="text-blue-600" />}
-          helperText="All time form visits"
-          value={visits.toLocaleString() || ""}
-          loading={false}
-          className="shadow-md shadow-blue-600"
-        />
-
-        <StatsCard
-          title="Submission Rate"
-          icon={<HiCursorClick className="text-green-600" />}
-          helperText="All time form visits"
-          value={submissionRate.toLocaleString() + "%" || ""}
-          loading={false}
-          className="shadow-md shadow-green-600"
-        />
-
-        <StatsCard
-          title="Bounce Rate"
-          icon={<TbArrowBounce className="text-red-600" />}
-          helperText="Visits that leave without interactig"
-          value={bounceRate.toLocaleString() + "%" || ""}
-          loading={false}
-          className="shadow-md shadow-red-600"
-        />
-      </div>
-
-      <div className="container pt-10">
-        <SubmissionsTable id={form.id} />
-      </div>
+      {forms.map((form) => (
+        <FormCard key={form.id} form={form} />
+      ))}
     </>
   );
 }
 
-export default FormDetailPage;
-
-type Row = { [key: string]: string } & { submittedAt: Date };
-
-function RowCell({ type, value }: { type: ElementsType; value: string }) {
-  let node: ReactNode = value;
-
-  switch (type) {
-    case "DateField":
-      if (!value) break;
-      const date = new Date(value);
-      node = <Badge variant={"outline"}>{format(date, "dd/MM/yyy")}</Badge>;
-      break;
-    case "CheckboxField":
-      const checked = value === "true";
-      node = <Checkbox checked={checked} disabled />;
-      break;
-  }
-
-  return <TableCell>{node}</TableCell>;
-}
-
-async function SubmissionsTable({ id }: { id: number }) {
-  const form = await GetFormWithSubmissions(id);
-  if (!form) {
-    throw new Error("form not found");
-  }
-
-  const formElements = JSON.parse(form.content) as FormElementInstance[];
-  const columns: {
-    id: string;
-    label: string;
-    required: boolean;
-    type: ElementsType;
-  }[] = [];
-
-  formElements.forEach((element) => {
-    switch (element.type) {
-      case "TextField":
-      case "NumberField":
-      case "TextAreaField":
-      case "DateField":
-      case "SelectField":
-      case "CheckboxField":
-        columns.push({
-          id: element.id,
-          label: element.extraAttributes?.label,
-          required: element.extraAttributes?.required,
-          type: element.type,
-        });
-        break;
-      default:
-        break;
-    }
-  });
-
-  const rows: Row[] = [];
-  form.FormSubmissions.forEach((submission) => {
-    const content = JSON.parse(submission.content);
-    rows.push({
-      ...content,
-      submittedAt: submission.createdAt,
-    });
-  });
-
+function FormCard({ form }: { form: Form }) {
   return (
-    <>
-      <h1 className="text-2xl font-bold my-4">Submissions</h1>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.id} className="uppercase">
-                  {column.label}
-                </TableHead>
-              ))}
-
-              <TableHead className="text-muted-foreground text-right uppercase">
-                Submitted At
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {rows.map((row, index) => (
-              <TableRow key={index}>
-                {columns.map((column) => (
-                  <RowCell
-                    key={column.id}
-                    type={column.type}
-                    value={row[column.id]}
-                  />
-                ))}
-                <TableCell>
-                  {formatDistance(row.submittedAt, new Date(), {
-                    addSuffix: true,
-                  })}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 justify-between">
+          <span className="truncate font-bold">{form.name}</span>
+          {form.published && <Badge>Published</Badge>}
+          {!form.published && <Badge variant={"destructive"}>Draft</Badge>}
+        </CardTitle>
+        <CardDescription className="flex items-center justify-between text-muted-foreground text-sm">
+          {formatDistance(form.createdAt, new Date(), {
+            addSuffix: true,
+          })}
+          {form.published && (
+            <span className="flex items-center gap-2">
+              <LuView className="text-muted-foreground" />
+              <span>{form.visits.toLocaleString()}</span>
+              <FaWpforms className="text-muted-foreground" />
+              <span>{form.submissions.toLocaleString()}</span>
+            </span>
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="h-[20px] truncate text-sm text-muted-foreground">
+        {form.description || "No description"}
+      </CardContent>
+      <CardFooter>
+        {form.published && (
+          <Button asChild className="w-full mt-2 text-md gap-4">
+            <Link href={`/forms/${form.id}`}>
+              View submissions <BiRightArrowAlt />
+            </Link>
+          </Button>
+        )}
+        {!form.published && (
+          <Button asChild variant={"secondary"} className="w-full mt-2 text-md gap-4">
+            <Link href={`/builder/${form.id}`}>
+              Edit form <FaEdit />
+            </Link>
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   );
 }
